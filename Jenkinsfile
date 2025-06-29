@@ -1,20 +1,40 @@
 pipeline {
   agent any
 
+  environment {
+    IMAGE = "my-devops-app:${BUILD_NUMBER}"
+    CONTAINER_NAME = "my-devops-app"
+  }
+
   stages {
-    stage('Build') {
+    stage('Checkout') {
       steps {
-        echo 'Building...'
+        git 'https://github.com/laxmikantat/my-devops-app.git'
       }
     }
-    stage('Test') {
+
+    stage('Build Docker Image') {
       steps {
-        echo 'Testing...'
+        sh 'docker build -t $IMAGE .'
       }
     }
-    stage('Deploy') {
+
+    stage('Stop Old Container') {
       steps {
-        echo 'Deploying...'
+        script {
+          sh """
+            if [ \$(docker ps -q -f name=$CONTAINER_NAME) ]; then
+              docker stop $CONTAINER_NAME
+              docker rm $CONTAINER_NAME
+            fi
+          """
+        }
+      }
+    }
+
+    stage('Run New Container') {
+      steps {
+        sh 'docker run -d --name $CONTAINER_NAME -p 3000:3000 $IMAGE'
       }
     }
   }
